@@ -1,2 +1,111 @@
-<h1>Pages#home</h1>
-<p>Find me in app/views/pages/home.html.erb</p>
+<div class="container pt-5">
+  <div class="d-flex justify-content-center pt-5 mt-5">
+    <div id="mic-toggle" class="shadow p-3 mb-5 bg-body d-flex align-items-center justify-content-center" style="border-radius: 50%; width: 100px; height: 100px;">
+      <i class="fa fa-microphone" style="font-size:48px;"></i>
+    </div>  
+  </div>
+</div>
+<div class="recorder-box"></div>
+
+<script>
+  // Html selectors
+  const micToggle = document.querySelector("#mic-toggle");
+  const micIcon = document.querySelector(".fa.fa-microphone");
+  const audioContainer = document.querySelector(".recorder-box");
+  // Records audio data into const
+  const audioChunks = [];
+  // Ask user for access to their microphone.
+  navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(stream => {
+      let mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.addEventListener("dataavailable", (event) => {
+        // record audio data into array
+        audioChunks.push(event.data);
+      });
+      mediaRecorder.addEventListener("stop", () => {
+        // Convert audioChunks into audioBlob.
+        // { type: 'audio/flac' } This is important. Google-cloud-speech api likes audio '.flac' type.
+        const audioBlob = new Blob(audioChunks, { type: 'audio/flac' })
+        audioChunks.length = 0;
+
+        // append the audioBlob to formData.
+        const formData = new FormData();
+        formData.append("files", audioBlob);
+
+        // creating audio element and append the element to audioContainer.
+        const audio  = document.createElement("audio");
+        audio.controls = true;
+        const source  = document.createElement("source");
+        source.src = URL.createObjectURL(audioBlob);
+        audio.appendChild(source);
+        console.log(audio);
+        audioContainer.appendChild(audio);
+
+        // Make fetch request to Rails.
+        const crsfToken = document.querySelector("meta[name='csrf-token']").content;
+        console.log(crsfToken);
+        fetch("/pages/transcript", {
+          method: "POST",
+          headers: {"X-CSRF-Token": crsfToken },
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => console.log(data));
+      });
+
+      // EventListener to toggle recorder
+      micToggle.addEventListener("click", ()=> {
+        if (mediaRecorder.state == "inactive") {
+          mediaRecorder.start()
+          micIcon.style.color = "red";
+        } else {
+          micIcon.style.color = "black";
+          mediaRecorder.stop();
+        }
+      })
+    });
+</script>
+
+
+
+
+
+
+
+<%# <script>
+
+  const micToggle = document.querySelector("#mic-toggle");
+  const micIcon = document.querySelector(".fa.fa-microphone");
+  const audioContainer = document.querySelector(".recorder-box");
+  const audioChunks = [];
+  navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(stream => {
+      let mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.addEventListener("dataavailable", (event) => {
+        audioChunks.push(event.data);
+      });
+      mediaRecorder.addEventListener("stop", () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/flac' })
+        audioChunks.length = 0;
+        const formData = new FormData();
+        formData.append("files", audioBlob);
+        const audio  = document.createElement("audio");
+        audio.controls = true;
+        const source  = document.createElement("source");
+        source.src = URL.createObjectURL(audioBlob);
+        audio.appendChild(source);
+        console.log(audio);
+        audioContainer.appendChild(audio);
+      });
+      micToggle.addEventListener("click", ()=> {
+        if (mediaRecorder.state == "inactive") {
+          mediaRecorder.start()
+          micIcon.style.color = "red";
+        } else {
+          micIcon.style.color = "black";
+          mediaRecorder.stop();
+        }
+      })
+    });
+</script> %>
+

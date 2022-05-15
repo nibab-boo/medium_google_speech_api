@@ -3,5 +3,6 @@ class PagesController < ApplicationController
   end
 
   def transcript
+    byebug
   end
 end
